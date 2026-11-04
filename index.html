@@ -1,0 +1,443 @@
+<const SUPABASE_URL = "https://kqiphosgamhnotwqvjxr.supabase.co";
+const SUPABASE_ANON_KEY =sb_publishable_jq3Fml7jVyRR3QUYODOSJw_ES9BhwDe
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Taskora</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <style>
+    :root {
+      --bg: #0b0612; --panel: rgba(255,255,255,0.045); --line: rgba(255,255,255,0.1);
+      --text: #efe9fa; --muted: #9187a8; --accent: #a855f7; --accent-2: #ec4899;
+      --orange: #fbbf24; --green: #34d399;
+      --red: #fb7185; --field: #150d22;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", -apple-system, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 50% -10%, #2d1250 0%, var(--bg) 60%) fixed;
+      color: var(--text); min-height: 100vh;
+    }
+    button { font-family: inherit; cursor: pointer; }
+    [hidden] { display: none !important; }
+    header { padding: 16px 28px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .logo { font-weight: 800; letter-spacing: 0.04em; font-size: 1.05rem; }
+    .logo i { color: var(--accent-2); font-style: normal; margin-right: 8px; }
+    .user { display: flex; align-items: center; gap: 12px; font-size: 0.8rem; color: var(--muted); }
+    .user span { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .logout { background: transparent; border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 6px 12px; font-size: 0.78rem; transition: .2s; }
+    .logout:hover { border-color: var(--red); color: var(--red); }
+    main { max-width: 620px; margin: 0 auto; padding: 32px 16px 60px; }
+
+    /* Auth */
+    .auth-wrap { max-width: 400px; margin: 70px auto; padding: 0 16px; }
+    .auth-wrap h1 { font-size: 1.4rem; text-align: center; margin-bottom: 6px; }
+    .auth-wrap p.sub { text-align: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 20px; }
+    .switch { text-align: center; margin-top: 16px; font-size: 0.82rem; color: var(--muted); }
+    .switch button { background: none; border: none; color: var(--accent); font-weight: 600; font-size: 0.82rem; }
+    .full { width: 100%; margin-top: 16px; }
+    .msg { font-size: 0.8rem; margin-top: 10px; min-height: 1em; }
+    .msg.ok { color: var(--green); } .msg.bad { color: var(--red); }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 10px; text-align: center; backdrop-filter: blur(6px); }
+    .ring { width: 38px; height: 38px; border-radius: 50%; margin: 0 auto 8px; border: 5px solid; display: grid; place-items: center; font-weight: 700; font-size: 0.8rem; }
+    .stat.t .ring { border-color: var(--accent); color: var(--accent); }
+    .stat.p .ring { border-color: var(--orange); color: var(--orange); }
+    .stat.d .ring { border-color: var(--green); color: var(--green); }
+    .stat span { font-size: 0.65rem; letter-spacing: 0.15em; color: var(--muted); }
+
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 20px; backdrop-filter: blur(6px); }
+    .card h2 { font-size: 0.8rem; letter-spacing: 0.14em; color: #d3c6ec; margin-bottom: 14px; }
+    label { display: block; font-size: 0.62rem; letter-spacing: 0.14em; color: var(--muted); margin: 12px 0 6px; }
+    input, select {
+      width: 100%; background: var(--field); color: var(--text); border: 1px solid var(--line);
+      border-radius: 8px; padding: 11px 12px; font-size: 0.9rem; outline: none; color-scheme: dark; font-family: inherit;
+    }
+    input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(168,85,247,0.2); }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .btns { display: flex; gap: 10px; margin-top: 16px; }
+    .add {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; border: none; border-radius: 8px;
+      padding: 11px 22px; font-weight: 700; font-size: 0.9rem; transition: transform .1s, filter .2s;
+    }
+    .add:hover { filter: brightness(1.1); } .add:active { transform: scale(0.97); }
+    .add:disabled { opacity: .6; cursor: wait; }
+    .cancel { background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 8px; padding: 11px 18px; display: none; }
+    .err { color: var(--red); font-size: 0.78rem; margin-top: 8px; min-height: 1em; }
+
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+    .pill { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 99px; padding: 6px 14px; font-size: 0.75rem; transition: .2s; }
+    .pill:hover { color: var(--text); border-color: #6b4f93; }
+    .pill.active { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; color: #fff; font-weight: 600; }
+
+    ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .task {
+      display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line);
+      border-left: 4px solid var(--muted); border-radius: 12px; padding: 13px 14px; animation: in .25s ease;
+    }
+    @keyframes in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    .task.High { border-left-color: var(--red); } .task.Medium { border-left-color: var(--orange); } .task.Low { border-left-color: var(--green); }
+    .task input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; padding: 0; }
+    .info { flex: 1; min-width: 0; }
+    .name { font-weight: 600; word-break: break-word; }
+    .task.done .name { text-decoration: line-through; color: var(--muted); }
+    .task.done { opacity: .65; }
+    .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; font-size: 0.7rem; }
+    .tag { padding: 2px 9px; border-radius: 99px; background: rgba(255,255,255,0.07); color: var(--muted); }
+    .tag.High { background: rgba(251,113,133,.16); color: var(--red); }
+    .tag.Medium { background: rgba(251,191,36,.16); color: var(--orange); }
+    .tag.Low { background: rgba(52,211,153,.16); color: var(--green); }
+    .tag.over { background: rgba(251,113,133,.16); color: var(--red); }
+    .ib { width: 32px; height: 32px; border: none; border-radius: 8px; background: rgba(255,255,255,0.06); color: var(--muted); transition: .2s; }
+    .ib.e:hover { background: var(--accent); color: #fff; } .ib.x:hover { background: var(--red); color: #fff; }
+    .empty { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 34px 0; }
+    .foot { display: flex; justify-content: space-between; margin-top: 18px; font-size: 0.78rem; color: var(--muted); }
+    .foot button { background: none; border: none; color: var(--red); font-size: 0.78rem; }
+    @media (max-width: 480px) { .two { grid-template-columns: 1fr; } .user span { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo"><i>◆</i>Taskora</div>
+    <div class="user" id="userBox" hidden>
+      <span id="userEmail"></span>
+      <button class="logout" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+
+  <!-- Login / Sign up -->
+  <section class="auth-wrap" id="authView" hidden>
+    <div class="card">
+      <h1 id="authTitle">Welcome back</h1>
+      <p class="sub" id="authSub">Log in to see your tasks</p>
+      <label for="email">EMAIL</label>
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
+      <label for="password">PASSWORD</label>
+      <input type="password" id="password" placeholder="At least 6 characters" autocomplete="current-password" />
+      <button class="add full" id="authBtn">Log in</button>
+      <div class="msg" id="authMsg"></div>
+      <div class="switch">
+        <span id="switchText">New here?</span>
+        <button id="switchBtn">Create an account</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- App -->
+  <main id="appView" hidden>
+    <section class="stats">
+      <div class="stat t"><div class="ring" id="sTotal">0</div><span>TOTAL</span></div>
+      <div class="stat p"><div class="ring" id="sPending">0</div><span>PENDING</span></div>
+      <div class="stat d"><div class="ring" id="sDone">0</div><span>DONE</span></div>
+    </section>
+
+    <section class="card">
+      <h2 id="formTitle">+ ADD NEW TASK</h2>
+      <label for="title">TASK TITLE *</label>
+      <input type="text" id="title" placeholder="What needs to be done?" maxlength="120" autocomplete="off" />
+      <div class="two">
+        <div>
+          <label for="priority">PRIORITY</label>
+          <select id="priority"><option>Low</option><option selected>Medium</option><option>High</option></select>
+        </div>
+        <div>
+          <label for="date">DUE DATE</label>
+          <input type="date" id="date" />
+        </div>
+      </div>
+      <div class="two">
+        <div>
+          <label for="time">DUE TIME</label>
+          <input type="time" id="time" />
+        </div>
+      </div>
+      <div class="err" id="err"></div>
+      <div class="btns">
+        <button class="add" id="addBtn">Add Task</button>
+        <button class="cancel" id="cancelBtn">Cancel</button>
+      </div>
+    </section>
+
+    <nav class="filters" id="filters">
+      <button class="pill active" data-f="all">All</button>
+      <button class="pill" data-f="pending">Pending</button>
+      <button class="pill" data-f="completed">Completed</button>
+      <button class="pill" data-f="High">High</button>
+      <button class="pill" data-f="Medium">Medium</button>
+      <button class="pill" data-f="Low">Low</button>
+      <button class="pill" data-f="overdue">Overdue</button>
+    </nav>
+
+    <ul id="list"></ul>
+    <div class="empty" id="empty">Loading your tasks…</div>
+
+    <div class="foot">
+      <span id="footInfo"></span>
+      <button id="clearDone">Clear completed</button>
+    </div>
+  </main>
+
+  <script>
+    /* ============ 1. PASTE YOUR SUPABASE KEYS HERE ============ */
+    const SUPABASE_URL = "YOUR_SUPABASE_PROJECT_URL";
+    const SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+    /* ========================================================== */
+
+    const $ = (id) => document.getElementById(id);
+    let sb = null;
+    let user = null;
+    let tasks = [];
+    let filter = "all";
+    let editId = null;
+    let signupMode = false;
+
+    /* ---------- Helpers ---------- */
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+    function dueDateObj(t) {
+      if (!t.due_date) return null;
+      return new Date(t.due_date + "T" + (t.due_time ? t.due_time.slice(0, 5) : "23:59"));
+    }
+    function isOverdue(t) { const d = dueDateObj(t); return !t.done && d && d < new Date(); }
+    function fmtDue(t) {
+      if (!t.due_date) return "";
+      const d = new Date(t.due_date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      if (!t.due_time) return d;
+      const [h, m] = t.due_time.split(":");
+      const hr = ((+h + 11) % 12) + 1;
+      return d + ", " + hr + ":" + m + " " + (+h >= 12 ? "PM" : "AM");
+    }
+    function setMsg(text, ok) {
+      $("authMsg").textContent = text || "";
+      $("authMsg").className = "msg " + (ok ? "ok" : "bad");
+    }
+
+    /* ---------- Views ---------- */
+    function showAuth() {
+      user = null; tasks = [];
+      $("authView").hidden = false;
+      $("appView").hidden = true;
+      $("userBox").hidden = true;
+    }
+    function showApp() {
+      $("authView").hidden = true;
+      $("appView").hidden = false;
+      $("userBox").hidden = false;
+      $("userEmail").textContent = user.email;
+      loadTasks();
+    }
+
+    /* ---------- Auth ---------- */
+    function setMode(signup) {
+      signupMode = signup;
+      $("authTitle").textContent = signup ? "Create your account" : "Welcome back";
+      $("authSub").textContent = signup ? "Sign up to save tasks in the cloud" : "Log in to see your tasks";
+      $("authBtn").textContent = signup ? "Sign up" : "Log in";
+      $("switchText").textContent = signup ? "Already have an account?" : "New here?";
+      $("switchBtn").textContent = signup ? "Log in" : "Create an account";
+      $("password").autocomplete = signup ? "new-password" : "current-password";
+      setMsg("");
+    }
+
+    async function handleAuth() {
+      const email = $("email").value.trim();
+      const password = $("password").value;
+      if (!email || !password) return setMsg("Enter your email and password.");
+      if (password.length < 6) return setMsg("Password must be at least 6 characters.");
+      $("authBtn").disabled = true;
+      setMsg("");
+      try {
+        if (signupMode) {
+          const { data, error } = await sb.auth.signUp({ email, password });
+          if (error) throw error;
+          if (!data.session) setMsg("Account created! Check your email to confirm, then log in.", true);
+        } else {
+          const { error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+        }
+      } catch (e) {
+        setMsg(e.message || "Something went wrong.");
+      }
+      $("authBtn").disabled = false;
+    }
+
+    /* ---------- CRUD (Supabase) ---------- */
+    async function loadTasks() {
+      $("empty").style.display = "block";
+      $("empty").textContent = "Loading your tasks…";
+      const { data, error } = await sb.from("tasks").select("*").order("created_at", { ascending: false });
+      if (error) { $("empty").textContent = "Could not load tasks: " + error.message; return; }
+      tasks = data || [];
+      render();
+    }
+
+    async function submit() {
+      const title = $("title").value.trim();
+      if (!title) { $("err").textContent = "Please enter a task title."; $("title").focus(); return; }
+      if ($("time").value && !$("date").value) { $("err").textContent = "Pick a due date to go with the time."; return; }
+      $("err").textContent = "";
+      const payload = {
+        title,
+        priority: $("priority").value,
+        due_date: $("date").value || null,
+        due_time: $("time").value || null
+      };
+      $("addBtn").disabled = true;
+      let error;
+      if (editId) {
+        ({ error } = await sb.from("tasks").update(payload).eq("id", editId));
+      } else {
+        ({ error } = await sb.from("tasks").insert(payload));
+      }
+      $("addBtn").disabled = false;
+      if (error) { $("err").textContent = error.message; return; }
+      resetForm();
+      loadTasks();
+    }
+
+    async function toggleTask(id, done) {
+      const { error } = await sb.from("tasks").update({ done }).eq("id", id);
+      if (error) { alert(error.message); }
+      loadTasks();
+    }
+
+    async function deleteTask(id) {
+      const { error } = await sb.from("tasks").delete().eq("id", id);
+      if (error) { alert(error.message); return; }
+      if (editId === id) resetForm();
+      loadTasks();
+    }
+
+    async function clearCompleted() {
+      if (!tasks.some((t) => t.done)) return;
+      if (!confirm("Remove all completed tasks?")) return;
+      const { error } = await sb.from("tasks").delete().eq("done", true);
+      if (error) alert(error.message);
+      loadTasks();
+    }
+
+    /* ---------- UI ---------- */
+    function resetForm() {
+      editId = null;
+      $("title").value = ""; $("date").value = ""; $("time").value = ""; $("priority").value = "Medium";
+      $("err").textContent = "";
+      $("formTitle").textContent = "+ ADD NEW TASK";
+      $("addBtn").textContent = "Add Task";
+      $("cancelBtn").style.display = "none";
+    }
+
+    function matches(t) {
+      switch (filter) {
+        case "pending": return !t.done;
+        case "completed": return t.done;
+        case "overdue": return isOverdue(t);
+        case "High": case "Medium": case "Low": return t.priority === filter;
+        default: return true;
+      }
+    }
+
+    function render() {
+      const shown = tasks.filter(matches);
+      $("list").innerHTML = shown.map((t) => `
+        <li class="task ${esc(t.priority)}${t.done ? " done" : ""}" data-id="${t.id}">
+          <input type="checkbox" ${t.done ? "checked" : ""} aria-label="Mark done" />
+          <div class="info">
+            <div class="name">${esc(t.title)}</div>
+            <div class="meta">
+              <span class="tag ${esc(t.priority)}">${esc(t.priority)}</span>
+              ${t.due_date ? `<span class="tag ${isOverdue(t) ? "over" : ""}">${isOverdue(t) ? "⚠ Overdue · " : "📅 "}${fmtDue(t)}</span>` : ""}
+            </div>
+          </div>
+          <button class="ib e" data-act="edit" title="Edit" aria-label="Edit">✎</button>
+          <button class="ib x" data-act="del" title="Delete" aria-label="Delete">✕</button>
+        </li>`).join("");
+
+      $("empty").style.display = shown.length ? "none" : "block";
+      $("empty").textContent = tasks.length ? "No tasks match this filter." : "No tasks yet. Add your first one above!";
+
+      const done = tasks.filter((t) => t.done).length;
+      $("sTotal").textContent = tasks.length;
+      $("sPending").textContent = tasks.length - done;
+      $("sDone").textContent = done;
+      $("footInfo").textContent = shown.length + " shown";
+    }
+
+    /* ---------- Events ---------- */
+    function bindEvents() {
+      $("authBtn").addEventListener("click", handleAuth);
+      $("password").addEventListener("keydown", (e) => { if (e.key === "Enter") handleAuth(); });
+      $("email").addEventListener("keydown", (e) => { if (e.key === "Enter") handleAuth(); });
+      $("switchBtn").addEventListener("click", () => setMode(!signupMode));
+      $("logoutBtn").addEventListener("click", () => sb.auth.signOut());
+
+      $("addBtn").addEventListener("click", submit);
+      $("cancelBtn").addEventListener("click", resetForm);
+      $("title").addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+
+      $("list").addEventListener("click", (e) => {
+        const li = e.target.closest(".task"); if (!li) return;
+        const id = li.dataset.id;
+        const btn = e.target.closest("button");
+        const act = btn && btn.dataset.act;
+        if (act === "del") deleteTask(id);
+        else if (act === "edit") {
+          const t = tasks.find((x) => x.id === id); if (!t) return;
+          editId = id;
+          $("title").value = t.title;
+          $("priority").value = t.priority;
+          $("date").value = t.due_date || "";
+          $("time").value = t.due_time ? t.due_time.slice(0, 5) : "";
+          $("formTitle").textContent = "✎ EDIT TASK";
+          $("addBtn").textContent = "Save Changes";
+          $("cancelBtn").style.display = "inline-block";
+          $("title").focus();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+      $("list").addEventListener("change", (e) => {
+        if (e.target.type !== "checkbox") return;
+        toggleTask(e.target.closest(".task").dataset.id, e.target.checked);
+      });
+
+      $("filters").addEventListener("click", (e) => {
+        const p = e.target.closest(".pill"); if (!p) return;
+        document.querySelectorAll(".pill").forEach((x) => x.classList.remove("active"));
+        p.classList.add("active");
+        filter = p.dataset.f;
+        render();
+      });
+      $("clearDone").addEventListener("click", clearCompleted);
+      setInterval(() => { if (user) render(); }, 60000);
+    }
+
+    /* ---------- Init ---------- */
+    async function init() {
+      bindEvents();
+      if (SUPABASE_URL.startsWith("YOUR_") || SUPABASE_ANON_KEY.startsWith("YOUR_")) {
+        $("authView").hidden = false;
+        setMsg("Add your Supabase URL and anon key at the top of the script in index.html.");
+        $("authBtn").disabled = true;
+        return;
+      }
+      sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+      const { data } = await sb.auth.getSession();
+      if (data.session) { user = data.session.user; showApp(); } else { showAuth(); }
+
+      sb.auth.onAuthStateChange((event, session) => {
+        if (session && session.user) {
+          const isNew = !user || user.id !== session.user.id;
+          user = session.user;
+          if (isNew) showApp();
+        } else if (user) {
+          showAuth();
+        }
+      });
+    }
+    init();
+  </script>
+</body>
+</html>
